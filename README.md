@@ -1,4 +1,83 @@
 <h1 align="center">
+  Does intuitive physics emerge in a video-JEPA?
+</h1>
+
+<p align="center">
+  <b>VivaTech 24h Hackathon - Track 10: <i>Does intuitive physics emerge?</i></b>
+</p>
+
+> This README presents our hackathon work. The original EB-JEPA library
+> documentation is [further down](#-eb-jepa).
+
+## The project in one sentence
+
+We train a **video-JEPA** only on **physically plausible** Moving-MNIST clips, then
+show it **impossible** clips (teleport, velocity reversal, pass-through a wall) and
+measure whether its **latent prediction energy** (`predcost`) rises on the
+impossible ones — a *violation-of-expectation* signal, like an infant who is
+surprised by a "magic" event.
+
+**Key result:** the JEPA detects the impossible with an **AUROC of 0.997**, whereas
+models that predict in **pixel** space fail (SimVP 0.50 = chance, ConvLSTM 0.74).
+Surprise *in latent space* beats surprise *in pixel space*.
+
+## What we built
+
+All of the work lives in [`examples/intuitive_physics/`](examples/intuitive_physics/).
+
+| Axis | Content | Files |
+|---|---|---|
+| **1. Energy probe** | Video-JEPA training + `clip_energy` (per-clip energy) + AUROC per violation type | `main.py`, `eval.py`, `stimuli.py` |
+| **2. Ablations / collapse** | We show the VICReg anti-collapse terms (`std`/`cov`) are necessary: without them the energy becomes meaningless | `cfgs/ablation/`, `collapse_metrics.py`, `make_ablation_figures.py` → `figures_ablation/` |
+| **3. 3-model comparison** | EB-JEPA (latent) vs SimVP (pixel CNN) vs ConvLSTM (pixel RNN) on the same VoE task | `compare.py`, `simvp.py`, `convlstm.py`, `train_*.py` |
+| **4. Latent visualization** | t-SNE/UMAP maps, decoded position, rollout, latent-vs-pixel to understand *what* the JEPA encodes | `visualize_latent.py` → `evidence/viz/` |
+
+## How to use the repo
+
+> The code runs on the GPU cluster (GB200, aarch64). See [Installation](#-installation).
+> Trainings are always launched via SLURM (`launch_sbatch`), from the repo root after `source env.sh`.
+
+```bash
+source env.sh
+source $UV_PROJECT_ENVIRONMENT/bin/activate
+```
+
+**1) Train the video-JEPA (the main model)**
+```bash
+python -m examples.launch_sbatch --example intuitive_physics --single \
+    --fname examples/intuitive_physics/cfgs/train.yaml
+```
+
+**2) Measure the energy on plausible/impossible pairs**
+```bash
+python -m examples.intuitive_physics.eval \
+    --ckpt $EBJEPA_CKPTS/intuitive_physics/<sweep>/exp_seed1/latest.pth.tar
+```
+
+**3) Run the ablations (collapse evidence)** — each config disables part of the regularization:
+```bash
+# one ablation, e.g. without the VICReg variance term
+python -m examples.launch_sbatch --example intuitive_physics --single \
+    --fname examples/intuitive_physics/cfgs/ablation/no_std.yaml
+# (same with full / no_cov / no_reg / weak_std), then the figures:
+python -m examples.intuitive_physics.make_ablation_figures
+```
+
+**4) Compare EB-JEPA vs SimVP vs ConvLSTM** — trains all 3 models then compares automatically:
+```bash
+bash examples/intuitive_physics/launch_comparison_pipeline.sh
+# on SLURM: 3 trainings in parallel + a dependent comparison job
+# (pixel models train via --example intuitive_physics_simvp / _convlstm)
+```
+
+**5) Visualize what the JEPA learned** (inference only, no training):
+```bash
+sbatch viz_inference.sh <CKPT> evidence/viz
+```
+
+---
+
+<h1 align="center">
     <p>⚡ <b>EB-JEPA</b></p>
 </h1>
 
