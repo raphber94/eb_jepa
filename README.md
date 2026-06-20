@@ -9,6 +9,20 @@
 > This README presents our hackathon work. The original EB-JEPA library
 > documentation is [further down](#-eb-jepa).
 
+<p align="center">
+  <i>The JEPA's prediction energy spikes the moment physics breaks — across all three violation types.</i>
+</p>
+
+<p align="center">
+  <img src="docs/gifs_compare/compare_teleport.gif" alt="Teleport detection" width="270"/>
+  <img src="docs/gifs_compare/compare_reversal.gif" alt="Reversal detection" width="270"/>
+  <img src="docs/gifs_compare/compare_passthrough.gif" alt="Pass-through detection" width="270"/>
+</p>
+
+<p align="center">
+  <b>teleport</b> &nbsp;·&nbsp; <b>velocity reversal</b> &nbsp;·&nbsp; <b>wall pass-through</b>
+</p>
+
 ## The project in one sentence
 
 We train a **video-JEPA** only on **physically plausible** Moving-MNIST clips, then
