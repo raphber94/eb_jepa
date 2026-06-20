@@ -1,0 +1,33 @@
+# Ablation NO-COV — variance on, covariance off (std=10, cov=0). Variance survives but
+# nothing decorrelates features: expect dimensional/partial collapse (low effective rank,
+# features redundant) and degraded AUROC. Isolates what the covariance term buys.
+meta:
+  seed: 1
+  device: auto
+  model_folder: ${oc.env:EBJEPA_CKPTS,checkpoints}/intuitive_physics/ablation/no_cov_seed1
+
+data:
+  T: 10
+  n_train: 9000
+  batch_size: 64
+  num_workers: 8
+
+model:
+  dobs: 1
+  henc: 32
+  dstc: 16
+  hpre: 32
+  steps: 4
+
+loss:
+  std_coeff: 10.0
+  cov_coeff: 0.0       # OFF
+
+optim:
+  lr: 1.0e-3
+  epochs: 15
+
+logging:
+  log_wandb: true
+  tqdm_silent: true
+  save_every: 5

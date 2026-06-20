@@ -1,0 +1,33 @@
+# Ablation NO-STD — variance term off, covariance on (std=0, cov=100). The covariance of
+# a constant representation is trivially 0, so cov alone cannot hold variance up.
+# Expected: collapse (isolates the variance term as the necessary one).
+meta:
+  seed: 1
+  device: auto
+  model_folder: ${oc.env:EBJEPA_CKPTS,checkpoints}/intuitive_physics/ablation/no_std_seed1
+
+data:
+  T: 10
+  n_train: 9000
+  batch_size: 64
+  num_workers: 8
+
+model:
+  dobs: 1
+  henc: 32
+  dstc: 16
+  hpre: 32
+  steps: 4
+
+loss:
+  std_coeff: 0.0       # OFF
+  cov_coeff: 100.0
+
+optim:
+  lr: 1.0e-3
+  epochs: 15
+
+logging:
+  log_wandb: true
+  tqdm_silent: true
+  save_every: 5

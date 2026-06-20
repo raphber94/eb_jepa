@@ -1,0 +1,31 @@
+# Ablation REFERENCE — full VICReg (std + cov). Expected: no collapse, AUROC ~1.0.
+meta:
+  seed: 1
+  device: auto
+  model_folder: ${oc.env:EBJEPA_CKPTS,checkpoints}/intuitive_physics/ablation/full_seed1
+
+data:
+  T: 10
+  n_train: 9000
+  batch_size: 64      # raised from 64 for GPU utilization (lr scaled by sqrt below)
+  num_workers: 8
+
+model:
+  dobs: 1
+  henc: 32
+  dstc: 16
+  hpre: 32
+  steps: 4
+
+loss:
+  std_coeff: 10.0      # variance (anti-collapse)
+  cov_coeff: 100.0     # covariance (decorrelation)
+
+optim:
+  lr: 1.0e-3
+  epochs: 50
+
+logging:
+  log_wandb: true
+  tqdm_silent: true
+  save_every: 5
