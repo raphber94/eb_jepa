@@ -2,22 +2,25 @@
 
 The DATA (procedural bouncing MNIST, in ``stimuli.py``) and the TRAINING LOOP are
 provided, reusing the eb_jepa core. The scientific exercise is the
-violation-of-expectation PROBE in ``eval.py`` (a ``# TODO``): compute the per-clip
-latent prediction energy (``predcost``) and compare it on matched plausible vs
+violation-of-expectation PROBE in ``eval.py``: compute the per-clip latent
+prediction energy (``predcost``) and compare it on matched plausible vs
 impossible clips.
 
 Run:  python -m examples.intuitive_physics.main --fname examples/intuitive_physics/cfgs/train.yaml
 """
+import csv
 from pathlib import Path
 
 import fire
+import torch.nn as nn
 from omegaconf import OmegaConf
 from torch.optim import Adam
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from eb_jepa.architectures import Projector, ResNet5, ResUNet, StateOnlyPredictor
-from eb_jepa.jepa import JEPA
+from eb_jepa.image_decoder import ImageDecoder
+from eb_jepa.jepa import JEPA, JEPAProbe
 from eb_jepa.logging import get_logger
 from eb_jepa.losses import SquareLossSeq, VCLoss
 from eb_jepa.training_utils import (
@@ -35,6 +38,18 @@ from eb_jepa.training_utils import (
 from examples.intuitive_physics.stimuli import ProceduralBouncingMNIST
 
 logger = get_logger(__name__)
+
+_CSV_COLUMNS = ["epoch", "loss", "vc_loss", "pred_loss", "std_loss", "cov_loss", "recon_loss"]
+
+
+def _append_csv(path: Path, row: dict) -> None:
+    """Append one row to a CSV log, writing the header on first call."""
+    write_header = not path.exists()
+    with open(path, "a", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=_CSV_COLUMNS)
+        if write_header:
+            writer.writeheader()
+        writer.writerow(row)
 
 
 def build_jepa(cfg, device):
@@ -82,13 +97,25 @@ def run(fname="examples/intuitive_physics/cfgs/train.yaml", cfg=None, folder=Non
                         num_workers=cfg.data.num_workers, drop_last=True)
 
     jepa = build_jepa(cfg, device)
-    optimizer = Adam(jepa.parameters(), lr=cfg.optim.lr)
+
+    # Pixel decoder head: ImageDecoder trained at lr/10 so it cannot dominate the JEPA objective.
+    decoder = ImageDecoder(cfg.model.dstc, cfg.model.dobs, hidden_dim=cfg.model.dstc)
+    pixel_decoder = JEPAProbe(jepa, decoder, nn.MSELoss()).to(device)
+
+    optimizer = Adam([
+        {"params": jepa.parameters(), "lr": cfg.optim.lr},
+        {"params": pixel_decoder.head.parameters(), "lr": cfg.optim.lr / 10},
+    ])
+
+    save_every = cfg.logging.get("save_every", 10)
+    csv_path = exp_dir / "train_log.csv"
     log_config(cfg)
     logger.info(f"Training {cfg.optim.epochs} epochs on {len(train_set)} clips -> {exp_dir}")
 
     global_step = 0
     for epoch in range(cfg.optim.epochs):
         jepa.train()
+        pixel_decoder.train()
         last = {}
         for batch in tqdm(loader, desc=f"epoch {epoch}",
                           disable=cfg.logging.get("tqdm_silent", True)):
@@ -97,28 +124,52 @@ def run(fname="examples/intuitive_physics/cfgs/train.yaml", cfg=None, folder=Non
             _, (loss, regl, _, regd, pl) = jepa.unroll(
                 x, actions=None, nsteps=cfg.model.steps, unroll_mode="parallel",
                 compute_loss=True)
-            loss.backward()
+            recon_loss = pixel_decoder(x, x)
+            total_loss = loss + recon_loss
+            total_loss.backward()
             optimizer.step()
             global_step += 1
-            last = {"loss": loss.item(), "vc": regl.item(), "pred": pl.item(), **regd}
+            last = {"loss": loss.item(), "vc": regl.item(), "pred": pl.item(),
+                    "recon": recon_loss.item(), **regd}
 
-        # Watch the VICReg std term: if it stays high while pred -> 0, the encoder
-        # is collapsing and the energy gap becomes meaningless.
-        metrics = {"train/loss": last["loss"], "train/vc_loss": last["vc"],
-                   "train/pred_loss": last["pred"], "train/std_loss": last["std_loss"],
-                   "train/cov_loss": last["cov_loss"]}
+        # Collapse watchdog: pred_loss near 0 while std_loss still high = collapsed encoder.
+        if epoch >= 2 and last.get("pred", 1.0) < 0.01 and last.get("std_loss", 0.0) > 0.5:
+            logger.warning(
+                f"⚠️  COLLAPSE RISK: pred_loss={last['pred']:.4f} "
+                f"std_loss={last['std_loss']:.4f} — consider raising std_coeff or lowering lr"
+            )
+
+        metrics = {
+            "train/loss": last["loss"], "train/vc_loss": last["vc"],
+            "train/pred_loss": last["pred"], "train/std_loss": last["std_loss"],
+            "train/cov_loss": last["cov_loss"], "train/recon_loss": last["recon"],
+        }
         if wandb_run:
             import wandb
             wandb.log(metrics, step=global_step)
-        log_epoch(epoch, {"loss": last["loss"], "vc": last["vc"], "pred": last["pred"]},
+
+        log_epoch(epoch, {"loss": last["loss"], "vc": last["vc"],
+                          "pred": last["pred"], "recon": last["recon"]},
                   total_epochs=cfg.optim.epochs)
-        save_checkpoint(exp_dir / "latest.pth.tar", model=jepa, optimizer=optimizer,
-                        epoch=epoch, step=global_step)
+
+        _append_csv(csv_path, {
+            "epoch": epoch, "loss": last["loss"], "vc_loss": last["vc"],
+            "pred_loss": last["pred"], "std_loss": last["std_loss"],
+            "cov_loss": last["cov_loss"], "recon_loss": last["recon"],
+        })
+
+        ckpt_kwargs = dict(
+            model=jepa, optimizer=optimizer, epoch=epoch, step=global_step,
+            decoder_state_dict=pixel_decoder.head.state_dict(),
+        )
+        save_checkpoint(exp_dir / "latest.pth.tar", **ckpt_kwargs)
+        if save_every > 0 and epoch > 0 and epoch % save_every == 0:
+            save_checkpoint(exp_dir / f"epoch_{epoch}.pth.tar", **ckpt_kwargs)
 
     if wandb_run:
         import wandb
         wandb.finish()
-    logger.info(f"done -> {exp_dir}/latest.pth.tar  (now run eval.py to probe the energy gap)")
+    logger.info(f"done -> {exp_dir}/latest.pth.tar  (run probe_checkpoints.py for the energy gap)")
 
 
 if __name__ == "__main__":

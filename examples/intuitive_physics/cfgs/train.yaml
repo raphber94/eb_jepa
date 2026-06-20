@@ -26,5 +26,6 @@ optim:
   epochs: 50
 
 logging:
-  log_wandb: false     # set true to log train metrics to wandb
+  log_wandb: true     # set true to log train metrics to wandb
   tqdm_silent: true
+  save_every: 5

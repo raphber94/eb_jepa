@@ -1,0 +1,32 @@
+# Intuitive physics — fast smoke-test config for collapse detection.
+# Goal: complete in ~3-5 min on one GB200 GPU.
+# Identical model/loss to train.yaml; only data volume and epoch count differ.
+meta:
+  seed: 1
+  device: auto
+
+data:
+  T: 10
+  n_train: 500
+  batch_size: 16
+  num_workers: 4
+
+model:
+  dobs: 1
+  henc: 32
+  dstc: 16
+  hpre: 32
+  steps: 4
+
+loss:
+  std_coeff: 10.0
+  cov_coeff: 100.0
+
+optim:
+  lr: 1.0e-3
+  epochs: 5
+
+logging:
+  log_wandb: false
+  tqdm_silent: false
+  save_every: 1
