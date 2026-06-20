@@ -1,0 +1,30 @@
+# MPPI planning with the LEARNED VALUE objective (Track 7, energy-based) for the
+# side-by-side model comparison. Pure value, NO distance blend (blend_coeff=0).
+# cost = 1 - V(z, z_goal); MPPI maximises the learned value.
+logging:
+  tqdm_silent: false
+  save_gif: true
+task_specification:
+  goal_source: random_state
+  obs: rgb
+  stop_on_success: true
+planner:
+  planner_name: mppi
+  num_act_stepped: 1
+  plan_length: 90
+  n_iters: 20
+  num_samples: 200
+  num_elites: 20
+  max_norms:
+    - 2.45
+  max_norm_dims:
+    - 0
+    - 1
+  var_scale: 1.5
+  decode_each_iteration: false
+  planning_objective:
+    objective_type: learned_value   # <-- the energy-based / learned-value cost
+    sum_all_diffs: true
+    blend_coeff: 0.0                 # 0 = pure value, NO distance
+    gamma: 0.95
+ctxt_window_time: 1

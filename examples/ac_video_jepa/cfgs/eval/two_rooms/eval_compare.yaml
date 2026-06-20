@@ -1,0 +1,11 @@
+# Eval config for the side-by-side model comparison: 10 rooms, sequential.
+# n_allowed_steps caps how long a model may take per room before we move on.
+meta:
+  num_eval_episodes: 10        # 10 rooms
+  plan_suffix: _compare
+  n_parallel: 1                # sequential, so per-episode gifs are written
+env:
+  n_allowed_steps: 100         # step budget per room
+  level: normal
+data:
+  env_name: two_rooms

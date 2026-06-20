@@ -1,5 +1,11 @@
 # EB-JEPA specific stuff
 /datasets/
+
+# Experiment artifacts + SLURM job logs (generated, not source)
+evidence/
+phase0_out/
+*.out
+*.err
 __pycache__/**
 jepa_decoder.pth
 .vscode/**

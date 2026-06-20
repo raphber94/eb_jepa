@@ -371,6 +371,22 @@ def run(
         )
         return eval_results
 
+    # -- METRICS CSV (collapse evidence): persist per-log-step metrics to disk so
+    # we can plot loss + anti-collapse indicators afterwards WITHOUT depending on
+    # wandb. One row every cfg.logging.log_every steps. Columns mirror log_data.
+    import csv as _csv
+
+    metrics_csv_path = folder / "metrics.csv"
+    _metrics_cols = [
+        "global_step", "epoch",
+        "total_loss", "reg_loss", "pred_loss", "probe_loss", "value_loss",
+        "std_loss", "cov_loss", "sim_loss_t", "idm_loss",
+        "jepa_lr",
+    ]
+    with open(metrics_csv_path, "w", newline="") as _f:
+        _csv.writer(_f).writerow(_metrics_cols)
+    logger.info(f"📈 Writing per-step metrics to {metrics_csv_path}")
+
     # -- TRAINING LOOP
     for epoch in range(start_epoch, cfg.optim.epochs):
         epoch_start_time = time()
@@ -528,6 +544,25 @@ def run(
 
                 if cfg.logging.get("log_wandb"):
                     wandb.log(log_data, step=global_step)
+
+                # -- COLLAPSE-VISIBILITY PATCH: print the per-term anti-collapse
+                # signals to stdout (so they show in the SLURM log even with wandb
+                # off) and append a row to metrics.csv for later plotting.
+                logger.info(
+                    f"step {global_step:>5} | total {total_loss.item():7.3f} "
+                    f"pred {pl.item():6.3f} probe {xy_loss.item():6.3f} | "
+                    f"std {regldict['std_loss']:6.3f} cov {regldict['cov_loss']:6.3f} "
+                    f"sim_t {regldict['sim_loss_t']:6.3f} idm {regldict['idm_loss']:6.3f}"
+                )
+                with open(metrics_csv_path, "a", newline="") as _f:
+                    _csv.writer(_f).writerow([
+                        global_step, epoch,
+                        total_loss.item(), regl.item(), pl.item(), xy_loss.item(),
+                        value_loss.item(),
+                        regldict["std_loss"], regldict["cov_loss"],
+                        regldict["sim_loss_t"], regldict["idm_loss"],
+                        jepa_optimizer.param_groups[0]["lr"],
+                    ])
 
             # Planning eval (only if eval is enabled)
             if (
