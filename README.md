@@ -3,14 +3,14 @@
 </h1>
 
 <p align="center">
-  <b>VivaTech 24h Hackathon - Track 10: <i>Does intuitive physics emerge?</i></b>
+  <b>Hack the World(s) 24h Hackathon - Track 10: <i>Does intuitive physics emerge?</i></b>
 </p>
 
 > This README presents our hackathon work. The original EB-JEPA library
 > documentation is [further down](#-eb-jepa).
 
 <p align="center">
-  <i>The JEPA's prediction energy spikes the moment physics breaks — across all three violation types.</i>
+  <i>The JEPA's prediction energy spikes the moment physics breaks - across all three violation types.</i>
 </p>
 
 <p align="center">
@@ -28,7 +28,7 @@
 We train a **video-JEPA** only on **physically plausible** Moving-MNIST clips, then
 show it **impossible** clips (teleport, velocity reversal, pass-through a wall) and
 measure whether its **latent prediction energy** (`predcost`) rises on the
-impossible ones — a *violation-of-expectation* signal, like an infant who is
+impossible ones - a *violation-of-expectation* signal, like an infant who is
 surprised by a "magic" event.
 
 **Key result:** the JEPA detects the impossible with an **AUROC of 0.997**, whereas
