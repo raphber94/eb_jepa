@@ -1,0 +1,32 @@
+# Ablation WEAK-STD — variance term weakened 10x (std=1, cov=100). Probes the margin of
+# safety: shows collapse is gradual, not binary, as the variance pressure drops.
+meta:
+  seed: 1
+  device: auto
+  model_folder: /lustre/work/vivatech-modelusifyoucan/rcaussign/checkpoints/intuitive_physics/ablation/weak_std_seed1
+
+data:
+  T: 10
+  n_train: 9000
+  batch_size: 64
+  num_workers: 8
+
+model:
+  dobs: 1
+  henc: 32
+  dstc: 16
+  hpre: 32
+  steps: 4
+
+loss:
+  std_coeff: 1.0       # weakened (was 10)
+  cov_coeff: 100.0
+
+optim:
+  lr: 1.0e-3
+  epochs: 15
+
+logging:
+  log_wandb: true
+  tqdm_silent: true
+  save_every: 5

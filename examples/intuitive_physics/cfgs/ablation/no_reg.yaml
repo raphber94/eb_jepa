@@ -1,0 +1,33 @@
+# Ablation NO-REG — regularizer fully off (std=0, cov=0). No stop-gradient/EMA in this
+# JEPA, so this is the clean demonstration of total collapse: pred_loss -> 0 while the
+# real feature std -> 0. Expected AUROC ~0.5 (energies become meaningless).
+meta:
+  seed: 1
+  device: auto
+  model_folder: /lustre/work/vivatech-modelusifyoucan/rcaussign/checkpoints/intuitive_physics/ablation/no_reg_seed1
+
+data:
+  T: 10
+  n_train: 9000
+  batch_size: 64
+  num_workers: 8
+
+model:
+  dobs: 1
+  henc: 32
+  dstc: 16
+  hpre: 32
+  steps: 4
+
+loss:
+  std_coeff: 0.0       # OFF
+  cov_coeff: 0.0       # OFF
+
+optim:
+  lr: 1.0e-3
+  epochs: 15
+
+logging:
+  log_wandb: true
+  tqdm_silent: true
+  save_every: 5
