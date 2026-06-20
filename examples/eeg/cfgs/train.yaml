@@ -1,27 +1,37 @@
 # EEG SSL pretraining config (two-view VICReg on TUAB_PREPROCESSED).
 meta:
   seed: 0
-  ckpt_dir: UPDATEME/checkpoints/eeg/dev
+  # launch_sbatch passes its own `folder` (this is only used for manual runs)
+  ckpt_dir: ${oc.env:EBJEPA_CKPTS}/eeg/overnight_big
+  save_every: 25           # periodic snapshot (epoch_25/50/...) alongside latest
 data:
   data_root: /lustre/work/pdl17890/udl806719/datasets/Neuro/TUAB-TUEV/TUAB_PREPROCESSED
   split: train
   n_channels: 19
   sfreq: 200
   window_sec: 10.0
-  epoch_size: 20000        # random windows per epoch
-  batch_size: 128
-  num_workers: 8
+  epoch_size: 40000        # random windows per epoch (2x for the long run)
+  batch_size: 1024
+  num_workers: 16          # loader is the real bottleneck, not the GPU
   aug_noise_std: 0.1
   aug_scale_jitter: 0.2
   aug_chan_drop_p: 0.2
   aug_time_mask_frac: 0.2
 model:
   in_channels: 19
-  out_dim: 256          # latent dim D (encoder output)
-  # TODO: add the hyperparameters your encoder / objective need
-  #       (hidden, depth, projector spec e.g. 256-1024-1024,
-  #        std_coeff, cov_coeff; or n_frames, predictor type, ema for JEPA)
+  out_dim: 512          # latent dim D (encoder output) — wider for the long run
+  # --- Conv1dEncoder ---
+  hidden: 128           # base channel width (ramps hidden -> 2*hidden -> ... -> out_dim)
+  depth: 5              # strided blocks; T=2000 -> 2000/2**depth = 62
+  # --- two-view objective ---
+  loss_type: vicreg     # vicreg | bcs (SIGReg ablation)
+  proj_dim: 1024        # projector spec defaults to out_dim-proj_dim-proj_dim
+  # VICReg coeffs: borrowed from image_jepa (1.0 / 80.0) — NOT validated for EEG,
+  # watch var_loss from step 0 and re-tune (cov_coeff is the usual lever).
+  std_coeff: 1.0
+  cov_coeff: 80.0
+  lmbd: 10.0            # BCS/SIGReg weight (only if loss_type=bcs)
 optim:
-  epochs: 20
+  epochs: 150
   lr: 0.001
   weight_decay: 1.0e-6
