@@ -2,7 +2,7 @@
 meta:
   seed: 1
   device: auto
-  model_folder: /lustre/work/vivatech-modelusifyoucan/rcaussign/checkpoints/intuitive_physics/ablation/full_seed1
+  model_folder: ${oc.env:EBJEPA_CKPTS,checkpoints}/intuitive_physics/ablation/full_seed1
 
 data:
   T: 10
