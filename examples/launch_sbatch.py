@@ -160,6 +160,16 @@ EXAMPLE_CONFIGS = {
         "module": "examples.intuitive_physics.main",
         "metric": "train/pred_loss",
     },
+    "intuitive_physics_simvp": {
+        "config": "examples/intuitive_physics/cfgs/simvp_train.yaml",
+        "module": "examples.intuitive_physics.train_simvp",
+        "metric": "train_loss",
+    },
+    "intuitive_physics_convlstm": {
+        "config": "examples/intuitive_physics/cfgs/convlstm_train.yaml",
+        "module": "examples.intuitive_physics.train_convlstm",
+        "metric": "train_loss",
+    },
     "factors_of_variation": {
         "config": "examples/factors_of_variation/cfgs/train.yaml",
         "module": "examples.factors_of_variation.main",
@@ -452,7 +462,8 @@ if __name__ == "__main__":
         required=True,
         choices=["image_jepa", "video_jepa", "ac_video_jepa", "maze",
                  "fintime", "ltsf", "eeg", "audio", "pointcloud", "gray_scott",
-                 "intuitive_physics","factors_of_variation"],
+                 "intuitive_physics", "intuitive_physics_simvp",
+                 "intuitive_physics_convlstm", "factors_of_variation"],
         help="Which example to run",
     )
     parser.add_argument(

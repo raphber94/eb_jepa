@@ -1,0 +1,28 @@
+# SimVP training config — Moving MNIST 64×64.
+# Mirrors train.yaml conditions for a fair comparison with EB-JEPA.
+meta:
+  seed: 1
+  device: auto          # auto | cuda | cpu
+  model_folder:         # optional explicit run dir; else auto under $EBJEPA_CKPTS
+
+data:
+  T: 10                 # total frames per clip (must match EB-JEPA)
+  n_train: 9000         # same ProceduralBouncingMNIST split as EB-JEPA
+  batch_size: 64
+  num_workers: 8
+
+model:
+  dobs: 1               # input channels (grayscale)
+  hid_S: 64             # spatial hidden dim in encoder/decoder  (~2.45M params ≈ EB-JEPA 2.1M)
+  n_translator_layers: 8 # depth of temporal translator
+  T_in: 5               # context frames  (0..4)
+  T_out: 5              # predicted frames (5..9); violations at t_v≈3-7 fall here
+
+optim:
+  lr: 1.0e-3
+  epochs: 50            # same budget as EB-JEPA
+
+logging:
+  log_wandb: false
+  tqdm_silent: true
+  save_every: 5
