@@ -51,6 +51,34 @@ def fig1_energy_gap(probe: pd.DataFrame, out: Path) -> None:
     print(f"  ✓ {out.name}")
 
 
+def fig6_energy_trajectories(probe: pd.DataFrame, out: Path) -> None:
+    """E(plausible) and E(impossible) separately vs epoch — one panel per violation.
+
+    Shows that E(plausible) collapses toward 0 (model masters physics) while
+    E(impossible) stays elevated, explaining the widening relative gap even as
+    the absolute gap shrinks.
+    """
+    fig, axes = plt.subplots(1, 3, figsize=(13, 4), dpi=DPI, sharey=True)
+    for ax, viol in zip(axes, VIOLATIONS):
+        df = probe[probe["violation"] == viol].sort_values("epoch")
+        color = VIOL_COLORS[viol]
+        ax.plot(df["epoch"], df["e_imp_mean"],   color=color, marker="o",
+                markersize=4, linewidth=2, label="impossible")
+        ax.plot(df["epoch"], df["e_plaus_mean"], color=color, marker="s",
+                markersize=4, linewidth=2, linestyle="--", alpha=0.6, label="plausible")
+        ax.fill_between(df["epoch"], df["e_plaus_mean"], df["e_imp_mean"],
+                        color=color, alpha=0.12, label="gap")
+        ax.set_title(viol, fontsize=10)
+        ax.set_xlabel("Epoch")
+        ax.legend(fontsize=7)
+    axes[0].set_ylabel("Latent prediction energy")
+    fig.suptitle("Energy per label: plausible (−−) vs impossible (—)", fontsize=11)
+    plt.tight_layout()
+    plt.savefig(str(out), bbox_inches="tight")
+    plt.close()
+    print(f"  ✓ {out.name}")
+
+
 def fig2_latent_vs_pixel(probe: pd.DataFrame, out: Path) -> None:
     """Latent gap (solid) vs pixel gap (dashed) — the A/B test from Garrido et al."""
     fig, ax = plt.subplots(figsize=(6, 4), dpi=DPI)
@@ -71,7 +99,7 @@ def fig2_latent_vs_pixel(probe: pd.DataFrame, out: Path) -> None:
     print(f"  ✓ {out.name}")
 
 
-def fig3_distributions(probe: pd.DataFrame, out_dir: Path, cfg, jepa, device) -> None:
+def fig3_distributions(probe: pd.DataFrame, out_dir: Path, cfg, jepa, device, fmt: str = "pdf") -> None:
     """Overlapping histograms of per-clip energies at final checkpoint (200 pairs each)."""
     final_epoch = int(probe["epoch"].max())
     pairs = build_probe_pairs(n_pairs=200, T=cfg.data.T, seed=999)
@@ -93,7 +121,7 @@ def fig3_distributions(probe: pd.DataFrame, out_dir: Path, cfg, jepa, device) ->
         ax.set_title(f"{viol}  (epoch {final_epoch})")
         ax.legend(fontsize=8)
         plt.tight_layout()
-        out = out_dir / f"fig3_distributions_{viol}.pdf"
+        out = out_dir / f"fig3_distributions_{viol}.{fmt}"
         plt.savefig(str(out), bbox_inches="tight")
         plt.close()
         print(f"  ✓ {out.name}")
@@ -168,6 +196,43 @@ def fig5_training_health(train_log: pd.DataFrame, out: Path) -> None:
     print(f"  ✓ {out.name}")
 
 
+def fig7_dprime_and_ratio(probe: pd.DataFrame, out: Path) -> None:
+    """d' (signal detection theory) and energy ratio vs epoch — the scale-invariant metrics.
+
+    d' = (μ_imp − μ_plaus) / σ_pooled: separation in units of std.
+    ratio = μ_imp / μ_plaus: relative elevation of impossible over plausible.
+    Both increase monotonically, unlike the absolute gap which shrinks as pred_loss → 0.
+    """
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11, 4), dpi=DPI)
+
+    for viol in VIOLATIONS:
+        df = probe[probe["violation"] == viol].sort_values("epoch")
+        color = VIOL_COLORS[viol]
+        if "d_prime" in df.columns:
+            ax1.plot(df["epoch"], df["d_prime"], color=color, marker="o",
+                     markersize=4, label=viol)
+        if "energy_ratio" in df.columns:
+            ax2.plot(df["epoch"], df["energy_ratio"], color=color, marker="o",
+                     markersize=4, label=viol)
+
+    ax1.axhline(0, color="gray", linestyle="--", linewidth=1)
+    ax1.set_xlabel("Epoch")
+    ax1.set_ylabel("d'  (gap / σ_pooled)")
+    ax1.set_title("d-prime: separation in units of std")
+    ax1.legend(fontsize=8)
+
+    ax2.axhline(1, color="gray", linestyle="--", linewidth=1, label="ratio=1 (no signal)")
+    ax2.set_xlabel("Epoch")
+    ax2.set_ylabel("E(impossible) / E(plausible)")
+    ax2.set_title("Energy ratio: relative surprise")
+    ax2.legend(fontsize=8)
+
+    plt.tight_layout()
+    plt.savefig(str(out), bbox_inches="tight")
+    plt.close()
+    print(f"  ✓ {out.name}")
+
+
 def main():
     args = sys.argv[1:]
     if "--ckpt_dir" not in args:
@@ -181,6 +246,7 @@ def main():
 
     ckpt_dir = Path(_get("--ckpt_dir"))
     fname    = _get("--fname", "examples/intuitive_physics/cfgs/eval.yaml")
+    fmt      = _get("--fmt", "pdf")
 
     cfg    = load_config(fname)
     device = setup_device(cfg.meta.get("device", "auto"))
@@ -194,13 +260,16 @@ def main():
 
     out_dir = ckpt_dir / "figures"
     out_dir.mkdir(exist_ok=True)
-    print(f"Writing figures to {out_dir}/")
+    print(f"Writing figures to {out_dir}/  (format: {fmt})")
 
-    fig1_energy_gap(probe, out_dir / "fig1_energy_gap.pdf")
-    fig2_latent_vs_pixel(probe, out_dir / "fig2_latent_vs_pixel.pdf")
-    fig3_distributions(probe, out_dir, cfg, jepa, device)
-    fig4_surprise_timeline(cfg, jepa, device, out_dir / "fig4_surprise_timeline.pdf")
-    fig5_training_health(train_log, out_dir / "fig5_training_health.pdf")
+    fig1_energy_gap(probe, out_dir / f"fig1_energy_gap.{fmt}")
+    fig6_energy_trajectories(probe, out_dir / f"fig6_energy_trajectories.{fmt}")
+    if "d_prime" in probe.columns:
+        fig7_dprime_and_ratio(probe, out_dir / f"fig7_dprime_and_ratio.{fmt}")
+    fig2_latent_vs_pixel(probe, out_dir / f"fig2_latent_vs_pixel.{fmt}")
+    fig3_distributions(probe, out_dir, cfg, jepa, device, fmt=fmt)
+    fig4_surprise_timeline(cfg, jepa, device, out_dir / f"fig4_surprise_timeline.{fmt}")
+    fig5_training_health(train_log, out_dir / f"fig5_training_health.{fmt}")
 
     print(f"\nAll figures saved to {out_dir}/")
 

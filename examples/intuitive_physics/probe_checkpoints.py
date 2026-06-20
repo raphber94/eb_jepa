@@ -27,6 +27,9 @@ _CSV_COLUMNS = [
     "latent_gap", "pixel_gap",
     "latent_auroc", "pixel_auroc",
     "e_plaus_mean", "e_imp_mean",
+    "e_plaus_std", "e_imp_std",
+    "d_prime",
+    "energy_ratio",
     "px_plaus_mean", "px_imp_mean",
 ]
 
@@ -75,6 +78,11 @@ def _probe_one(ckpt_path: Path, jepa, cfg, pairs, device, batch_size):
         lat_gap   = float(e_imp.mean() - e_pla.mean())
         lat_auroc = _auroc(e_pla, e_imp)
 
+        # d' (d-prime): separation in units of pooled std — the SDT metric
+        sigma_pooled = float(((e_pla.var() + e_imp.var()) / 2).sqrt())
+        d_prime = lat_gap / sigma_pooled if sigma_pooled > 0 else float("nan")
+        energy_ratio = float(e_imp.mean() / e_pla.mean()) if float(e_pla.mean()) > 0 else float("nan")
+
         pix_gap = pix_auroc = px_pla_mean = px_imp_mean = float("nan")
         if decoder_head is not None:
             px_pla = clip_pixel_energy(decoder_head, jepa, plaus,  device, batch_size)
@@ -89,6 +97,8 @@ def _probe_one(ckpt_path: Path, jepa, cfg, pairs, device, batch_size):
             "latent_gap": lat_gap, "pixel_gap": pix_gap,
             "latent_auroc": lat_auroc, "pixel_auroc": pix_auroc,
             "e_plaus_mean": float(e_pla.mean()), "e_imp_mean": float(e_imp.mean()),
+            "e_plaus_std": float(e_pla.std()), "e_imp_std": float(e_imp.std()),
+            "d_prime": d_prime, "energy_ratio": energy_ratio,
             "px_plaus_mean": px_pla_mean, "px_imp_mean": px_imp_mean,
         })
     return rows
