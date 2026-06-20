@@ -70,9 +70,20 @@ bash examples/intuitive_physics/launch_comparison_pipeline.sh
 # (pixel models train via --example intuitive_physics_simvp / _convlstm)
 ```
 
-**5) Visualize what the JEPA learned** (inference only, no training):
+**5) Visualizations** (inference only, no training — all read a trained checkpoint):
 ```bash
-sbatch viz_inference.sh <CKPT> evidence/viz
+# the stimuli themselves: matched plausible/impossible pairs (no checkpoint needed)
+python -m examples.intuitive_physics.visualize_stimuli
+
+# latent space: t-SNE/UMAP maps, decoded position, rollout, latent-vs-pixel
+sbatch viz_inference.sh <CKPT> evidence/viz          # on SLURM (GPU)
+python -m examples.intuitive_physics.visualize_latent --ckpt <CKPT> --out evidence/viz
+
+# energy-gap figures (AUROC, distributions) from a trained run
+python -m examples.intuitive_physics.make_figures --ckpt_dir <CKPT_DIR>
+
+# animated histograms of the plausible vs impossible energy gap
+python -m examples.intuitive_physics.make_gif_histograms --ckpt_dir <CKPT_DIR>
 ```
 
 ---
