@@ -1,0 +1,28 @@
+# ConvLSTM training config — Moving MNIST 64×64.
+# Mirrors train.yaml / simvp_train.yaml conditions for a fair 3-way comparison.
+meta:
+  seed: 1
+  device: auto
+  model_folder:           # optional explicit run dir; else auto under $EBJEPA_CKPTS
+
+data:
+  T: 10                   # total frames per clip (must match EB-JEPA)
+  n_train: 9000           # same ProceduralBouncingMNIST split
+  batch_size: 64
+  num_workers: 8
+
+model:
+  dobs: 1                 # input channels (grayscale)
+  hidden_channels: 64     # ConvLSTM hidden state channels (~463K params)
+  n_layers: 2             # number of stacked ConvLSTM cells
+  T_in: 5                 # context frames (0..4)
+  T_out: 5                # predicted frames (5..9)
+
+optim:
+  lr: 1.0e-3
+  epochs: 50              # same budget as EB-JEPA and SimVP
+
+logging:
+  log_wandb: false
+  tqdm_silent: true
+  save_every: 5

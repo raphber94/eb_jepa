@@ -1,0 +1,30 @@
+===============================================================================================================
+  Violation-of-Expectation Report — EB-JEPA (latent) vs SimVP (pixel CNN) vs ConvLSTM (pixel RNN)
+===============================================================================================================
+  EB-JEPA (latent)     checkpoint : /lustre/work/vivatech-modelusifyoucan/jtoudjine/checkpoints/intuitive_physics/dev_2026-06-20_13-36/exp_seed1/latest.pth.tar
+  SimVP (pixel CNN)    checkpoint : /lustre/work/vivatech-modelusifyoucan/jtoudjine/checkpoints/intuitive_physics_simvp/dev_2026-06-20_13-36/exp_seed1/latest.pth.tar
+  ConvLSTM (pixel RNN) checkpoint : /lustre/work/vivatech-modelusifyoucan/jtoudjine/checkpoints/intuitive_physics_convlstm/dev_2026-06-20_15-03/exp_seed1/latest.pth.tar
+
+  Metric : AUROC  (>0.5 = model surprised by violations; 1.0 = perfect)
+  Gap    : mean(impossible energy) − mean(plausible energy)
+
+  Violation     EB-JEPA AUROC   SimVP AUROC  ConvLSTM AUROC   EB-JEPA gap     SimVP gap  ConvLSTM gap
+  --------------------------------------------------------------------------------------------------
+  teleport            0.9984        0.4993        0.8039   +2.0146e-02   -4.3064e-06   +8.9443e-03
+  reversal            0.9939        0.5006        0.6986   +1.4556e-02   +1.4156e-06   +6.1953e-03
+  passthrough         0.9987        0.5127        0.7137   +2.1271e-02   +2.8640e-05   +5.5813e-03
+  --------------------------------------------------------------------------------------------------
+  MEAN                0.9970        0.5042        0.7387  ————————————————————————————————————
+
+  Interpretation:
+    EB-JEPA (latent)              : mean AUROC = 0.9970 (significantly above chance)
+    SimVP (pixel CNN)             : mean AUROC = 0.5042 (at chance)
+    ConvLSTM (pixel RNN)          : mean AUROC = 0.7387 (significantly above chance)
+
+  Best model: EB-JEPA (latent) (mean AUROC 0.9970)
+
+  Per-violation winner:
+    teleport    : EB-JEPA (latent)  (0.9984)
+    reversal    : EB-JEPA (latent)  (0.9939)
+    passthrough : EB-JEPA (latent)  (0.9987)
+===============================================================================================================
